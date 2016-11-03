@@ -290,9 +290,8 @@ public class SubscriptionController extends ISub.Stub {
                 SubscriptionManager.MNC));
         // FIXME: consider stick this into database too
         String countryIso = getSubscriptionCountryIso(id);
-
-        int simProvisioningStatus = cursor.getInt(cursor.getColumnIndexOrThrow(
-                SubscriptionManager.SIM_PROVISIONING_STATUS));
+        int userNwMode = cursor.getInt(cursor.getColumnIndexOrThrow(
+                SubscriptionManager.USER_NETWORK_MODE));
 
         if (VDBG) {
             String iccIdToPrint = SubscriptionInfo.givePrintableIccid(iccId);
@@ -300,7 +299,7 @@ public class SubscriptionController extends ISub.Stub {
                     + simSlotIndex + " displayName:" + displayName + " nameSource:" + nameSource
                     + " iconTint:" + iconTint + " dataRoaming:" + dataRoaming
                     + " mcc:" + mcc + " mnc:" + mnc + " countIso:" + countryIso
-                    + " simProvisioningStatus:" + simProvisioningStatus);
+                    + " userNwMode:" + userNwMode);
         }
 
         // If line1number has been set to a different number, use it instead.
@@ -309,8 +308,8 @@ public class SubscriptionController extends ISub.Stub {
             number = line1Number;
         }
         return new SubscriptionInfo(id, iccId, simSlotIndex, displayName, carrierName,
-                nameSource, iconTint, number, dataRoaming, iconBitmap, mcc, mnc, countryIso,
-                simProvisioningStatus);
+                nameSource, iconTint, number, dataRoaming, iconBitmap, mcc, mnc,
+                countryIso, userNwMode);
     }
 
     /**
@@ -1098,47 +1097,6 @@ public class SubscriptionController extends ISub.Stub {
         notifySubscriptionInfoChanged();
 
         return result;
-    }
-
-    /**
-     * Set SimProvisioning Status by subscription ID
-     * @param provisioningStatus with the subscription:
-     * {@See SubscriptionManager#SIM_PROVISIONED}
-     * {@See SubscriptionManager#SIM_UNPROVISIONED_COLD}
-     * {@See SubscriptionManager#SIM_UNPROVISIONED_OUT_OF_CREDIT}
-     * @param subId the unique SubInfoRecord index in database
-     * @return the number of records updated
-     */
-    @Override
-    public int setSimProvisioningStatus(int provisioningStatus, int subId) {
-
-        if (DBG) {
-            logd("[setSimProvisioningStatus]+ provisioningStatus:" + provisioningStatus + " subId:"
-                    + subId);
-        }
-
-        enforceModifyPhoneState("setSimProvisioningStatus");
-        // Now that all security checks passes, perform the operation as ourselves.
-        final long identity = Binder.clearCallingIdentity();
-        try {
-            validateSubId(subId);
-            if (provisioningStatus < 0 || provisioningStatus >
-                    SubscriptionManager.MAX_SIM_PROVISIONING_STATUS) {
-                logd("[setSimProvisioningStatus]- fail with wrong provisioningStatus");
-                return -1;
-            }
-            ContentValues value = new ContentValues(1);
-            value.put(SubscriptionManager.SIM_PROVISIONING_STATUS, provisioningStatus);
-
-            int result = mContext.getContentResolver().update(SubscriptionManager.CONTENT_URI,
-                    value, SubscriptionManager.UNIQUE_KEY_SUBSCRIPTION_ID + "=" +
-                            Long.toString(subId), null);
-            notifySubscriptionInfoChanged();
-
-            return result;
-        } finally {
-            Binder.restoreCallingIdentity(identity);
-        }
     }
 
     @Override
