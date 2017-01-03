@@ -72,9 +72,6 @@ import com.android.internal.telephony.uicc.IccIoResult;
 import com.android.internal.telephony.uicc.IccRefreshResponse;
 import com.android.internal.telephony.uicc.IccUtils;
 import com.android.internal.telephony.uicc.SimPhoneBookAdnRecord;
-import com.android.internal.telephony.RadioCapability;
-import com.android.internal.telephony.TelephonyDevController;
-import com.android.internal.telephony.HardwareConfig;
 
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
@@ -330,13 +327,7 @@ public class RIL extends BaseCommands implements CommandsInterface {
     static final int RESPONSE_SOLICITED_ACK_EXP = 3;
     static final int RESPONSE_UNSOLICITED_ACK_EXP = 4;
 
-    static final String[] SOCKET_NAME_RIL;
-    static {
-        String rilSocketName = SystemProperties.get("ro.telephony.ril.socket_name");
-        SOCKET_NAME_RIL = rilSocketName.isEmpty()
-                ? new String[] { "rild", "rild2", "rild3" }
-                : rilSocketName.split(",");
-    }
+    static final String[] SOCKET_NAME_RIL = {"rild", "rild2", "rild3"};
 
     static final int SOCKET_OPEN_RETRY_MILLIS = 4 * 1000;
 
@@ -3700,6 +3691,7 @@ public class RIL extends BaseCommands implements CommandsInterface {
                     mAdnRecordsInfoRegistrants.notifyRegistrants(
                                             new AsyncResult(null, ret, null));
                 }
+                break;
             case RIL_UNSOL_PCO_DATA:
                 if (RILJ_LOGD) unsljLogRet(response, ret);
 
