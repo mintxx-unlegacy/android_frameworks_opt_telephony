@@ -279,15 +279,13 @@ public class SubscriptionController extends ISub.Stub {
                 SubscriptionManager.CARRIER_NAME));
         int nameSource = cursor.getInt(cursor.getColumnIndexOrThrow(
                 SubscriptionManager.NAME_SOURCE));
-        int iconTint = cursor.getInt(cursor.getColumnIndexOrThrow(
-                SubscriptionManager.COLOR));
+        int iconTint = getIconTint(cursor);
         String number = cursor.getString(cursor.getColumnIndexOrThrow(
                 SubscriptionManager.NUMBER));
         int dataRoaming = cursor.getInt(cursor.getColumnIndexOrThrow(
                 SubscriptionManager.DATA_ROAMING));
         // Get the blank bitmap for this SubInfoRecord
-        Bitmap iconBitmap = BitmapFactory.decodeResource(mContext.getResources(),
-                com.android.internal.R.drawable.ic_sim_card_multi_24px_clr);
+        Bitmap iconBitmap = getIconBitmap(cursor);
         int mcc = cursor.getInt(cursor.getColumnIndexOrThrow(
                 SubscriptionManager.MCC));
         int mnc = cursor.getInt(cursor.getColumnIndexOrThrow(
@@ -328,6 +326,28 @@ public class SubscriptionController extends ISub.Stub {
             return "";
         }
         return mTelephonyManager.getSimCountryIsoForPhone(phoneId);
+    }
+
+    /**
+     * Return iconBitmap for SubInfoRecord
+     * @param cursor
+     * @return the iconBitmap
+     */
+    protected Bitmap getIconBitmap(Cursor cursor) {
+        Bitmap iconBitmap = BitmapFactory.decodeResource(mContext.getResources(),
+                com.android.internal.R.drawable.ic_sim_card_multi_24px_clr);
+        return iconBitmap;
+    }
+
+    /**
+     * Return iconTint for SubInfoRecord
+     * @param cursor
+     * @return the iconTint
+     */
+    protected int getIconTint(Cursor cursor) {
+        int iconTint = cursor.getInt(cursor.getColumnIndexOrThrow(
+                SubscriptionManager.COLOR));
+        return iconTint;
     }
 
     /**
@@ -1436,8 +1456,6 @@ public class SubscriptionController extends ISub.Stub {
         enforceModifyPhoneState("setDefaultDataSubId");
         String flexMapSupportType =
                 SystemProperties.get("persist.radio.flexmap_type", "dds");
-
-
         if (subId == SubscriptionManager.DEFAULT_SUBSCRIPTION_ID) {
             throw new RuntimeException("setDefaultDataSubId called with DEFAULT_SUB_ID");
         }
@@ -1460,6 +1478,7 @@ public class SubscriptionController extends ISub.Stub {
                 if (id == subId) {
                     // TODO Handle the general case of N modems and M subscriptions.
                     raf = proxyController.getMaxRafSupported();
+                    atLeastOneMatch = true;
                     slotId = phoneId;
                 } else {
                     // TODO Handle the general case of N modems and M subscriptions.
@@ -1485,6 +1504,20 @@ public class SubscriptionController extends ISub.Stub {
                 Settings.Global.MULTI_SIM_DATA_CALL_SUBSCRIPTION, subId);
         broadcastDefaultDataSubIdChanged(subId);
     }
+    private void updateDataSubNetworkType(int slotId, int subId) {
+        SubscriptionInfoUpdater subscriptionInfoUpdater = PhoneFactory.getSubscriptionInfoUpdater();
+        if (subscriptionInfoUpdater != null) {
+            subscriptionInfoUpdater.setDefaultDataSubNetworkType(slotId, subId);
+        }
+    }
+
+    private boolean needsSim2gsmOnly() {
+        if (sCommandsInterfaces != null && sCommandsInterfaces[0] instanceof RIL) {
+            return ((RIL) sCommandsInterfaces[0]).needsOldRilFeature("sim2gsmonly");
+        }
+        return false;
+    }
+
     private void updateDataSubNetworkType(int slotId, int subId) {
         SubscriptionInfoUpdater subscriptionInfoUpdater = PhoneFactory.getSubscriptionInfoUpdater();
         if (subscriptionInfoUpdater != null) {
@@ -1808,6 +1841,7 @@ public class SubscriptionController extends ISub.Stub {
             return SubscriptionManager.DEFAULT_NW_MODE;
         }
     }
+
     /**
      * Store properties associated with SubscriptionInfo in database
      * @param subId Subscription Id of Subscription

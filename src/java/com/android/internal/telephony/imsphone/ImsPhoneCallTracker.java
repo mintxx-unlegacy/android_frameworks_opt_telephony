@@ -361,9 +361,9 @@ public class ImsPhoneCallTracker extends CallTracker implements ImsPullCall {
     private void getImsService() throws ImsException {
         if (DBG) log("getImsService");
         mImsManager = ImsManager.getInstance(mPhone.getContext(), mPhone.getPhoneId());
-        mServiceId = mImsManager.open(ImsServiceClass.MMTEL,
-                createIncomingCallPendingIntent(),
-                mImsConnectionStateListener, mPhone.getPhoneId());
+            mServiceId = mImsManager.open(ImsServiceClass.MMTEL,
+                    createIncomingCallPendingIntent(),
+                    mImsConnectionStateListener, mPhone.getPhoneId());
 
         mImsManager.setImsConfigListener(mImsConfigListener);
 
@@ -395,7 +395,7 @@ public class ImsPhoneCallTracker extends CallTracker implements ImsPullCall {
 
         clearDisconnected();
         mPhone.getContext().unregisterReceiver(mReceiver);
-        mPhone.unregisterForDataEnabledChanged(this);
+        mPhone.getDefaultPhone().unregisterForDataEnabledChanged(this);
         removeMessages(EVENT_GET_IMS_SERVICE);
     }
 
@@ -1472,6 +1472,15 @@ public class ImsPhoneCallTracker extends CallTracker implements ImsPullCall {
 
             case ImsReasonInfo.CODE_FDN_BLOCKED:
                 return DisconnectCause.FDN_BLOCKED;
+
+            case ImsReasonInfo.CODE_EMERGENCY_TEMP_FAILURE:
+                return DisconnectCause.EMERGENCY_TEMP_FAILURE;
+
+            case ImsReasonInfo.CODE_EMERGENCY_PERM_FAILURE:
+                return DisconnectCause.EMERGENCY_PERM_FAILURE;
+
+            case ImsReasonInfo.CODE_NORMAL_UNSPECIFIED:
+                return DisconnectCause.NORMAL_UNSPECIFIED;
 
             case ImsReasonInfo.CODE_ANSWERED_ELSEWHERE:
                 return DisconnectCause.ANSWERED_ELSEWHERE;

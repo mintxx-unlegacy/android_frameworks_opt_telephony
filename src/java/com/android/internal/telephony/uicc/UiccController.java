@@ -129,9 +129,10 @@ public class UiccController extends Handler {
             // available.
             // Else wait for radio to be on. This is needed for the scenario when SIM is locked --
             // to avoid overlap of CryptKeeper and SIM unlock screen.
-            if ((DECRYPT_STATE.equals(SystemProperties.get("vold.decrypt")) ||
-                    StorageManager.isFileEncryptedNativeOrEmulated() &&
-                    mCis[i].getRilVersion() >= 9) || radioApmSimNotPwdn) {
+            if (DECRYPT_STATE.equals(SystemProperties.get("vold.decrypt")) ||
+                    StorageManager.isFileEncryptedNativeOrEmulated() || radioApmSimNotPwdn) {
+                // Reading ICC status in airplane mode is only supported in QCOM
+                // RILs when this property is set to true
                 mCis[i].registerForAvailable(this, EVENT_ICC_STATUS_CHANGED, index);
             } else {
                 mCis[i].registerForOn(this, EVENT_ICC_STATUS_CHANGED, index);
@@ -355,7 +356,7 @@ public class UiccController extends Handler {
         }
 
         // The card status could have changed. Get the latest state.
-        mCis[index].getIccCardStatus(obtainMessage(EVENT_GET_ICC_STATUS_DONE));
+        mCis[index].getIccCardStatus(obtainMessage(EVENT_GET_ICC_STATUS_DONE, index));
     }
 
     private boolean isValidCardIndex(int index) {

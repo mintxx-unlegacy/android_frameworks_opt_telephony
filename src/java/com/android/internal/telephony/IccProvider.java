@@ -483,6 +483,10 @@ public class IccProvider extends ContentProvider {
 
     private boolean
     updateIccRecordInEf(int efType, ContentValues values, String pin2, int subId) {
+        if (DBG) log("updateIccRecordInEf: efType=0x" + Integer.toHexString(efType).toUpperCase() +
+                ", values=" + Rlog.pii(TAG, values) +
+                ", subscription=" + subId);
+
         boolean success = false;
 
         if (DBG) log("updateIccRecordInEf: efType=" + efType +

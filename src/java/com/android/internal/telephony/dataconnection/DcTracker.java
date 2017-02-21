@@ -73,6 +73,7 @@ import android.util.SparseArray;
 import android.view.WindowManager;
 import android.telephony.Rlog;
 import android.telephony.CarrierConfigManager;
+import com.android.internal.telephony.PhoneFactory; 
 
 import com.android.internal.R;
 import com.android.internal.telephony.cdma.CdmaSubscriptionSourceManager;
@@ -1694,22 +1695,26 @@ public class DcTracker extends Handler {
         if (!TextUtils.isEmpty(reason)) {
             disableMeteredOnly = reason.equals(Phone.REASON_DATA_SPECIFIC_DISABLED) ||
                     reason.equals(Phone.REASON_ROAMING_ON) ||
-                    reason.equals(Phone.REASON_CARRIER_ACTION_DISABLE_METERED_APN);
+                    reason.equals(Phone.REASON_CARRIER_ACTION_DISABLE_METERED_APN) ||
+                    reason.equals(Phone.REASON_SINGLE_PDN_ARBITRATION) ||
+                    reason.equals(Phone.REASON_PDP_RESET);
         }
 
         for (ApnContext apnContext : mApnContexts.values()) {
             if (apnContext.isDisconnected() == false) didDisconnect = true;
             if (disableMeteredOnly) {
-                // Use ApnSetting to decide metered or non-metered.
+                if (!apnContext.getApnType().equals(PhoneConstants.APN_TYPE_IMS)) {
+		// Use ApnSetting to decide metered or non-metered.
                 // Tear down all metered data connections.
                 ApnSetting apnSetting = apnContext.getApnSetting();
                 if (apnSetting != null && apnSetting.isMetered(mPhone.getContext(),
                         mPhone.getSubId(), mPhone.getServiceState().getDataRoaming())) {
-                    if (apnContext.isDisconnected() == false) didDisconnect = true;
-                    if (DBG) log("clean up metered ApnContext Type: " +
-                            apnContext.getApnType());
-                    apnContext.setReason(reason);
-                    cleanUpConnection(tearDown, apnContext);
+                        if (apnContext.isDisconnected() == false) didDisconnect = true;
+                        if (DBG) log("clean up metered ApnContext Type: " +
+                                apnContext.getApnType());
+                        apnContext.setReason(reason);
+                        cleanUpConnection(tearDown, apnContext);
+                    }
                 }
             } else {
                 // TODO - only do cleanup if not disconnected

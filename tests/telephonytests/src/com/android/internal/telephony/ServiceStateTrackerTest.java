@@ -884,10 +884,4 @@ public class ServiceStateTrackerTest extends TelephonyTest {
         verify(mAlarmManager, times(1)).setTime(anyLong());
     }
 
-    @MediumTest
-    public void testIsRatLte() throws Exception {
-        assertTrue(sst.isRatLte(14));
-        assertTrue(sst.isRatLte(19));
-        assertFalse(sst.isRatLte(6));
-    }
 }
