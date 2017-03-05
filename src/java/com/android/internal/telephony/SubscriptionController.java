@@ -30,6 +30,7 @@ import android.os.RemoteException;
 import android.os.ServiceManager;
 import android.os.SystemProperties;
 import android.os.UserHandle;
+import android.provider.BaseColumns;
 import android.provider.Settings;
 import android.telephony.RadioAccessFamily;
 import android.telephony.Rlog;
@@ -40,6 +41,7 @@ import android.text.TextUtils;
 import android.text.format.Time;
 import android.util.Log;
 import java.util.Objects;
+import com.android.internal.telephony.RIL;
 import com.android.internal.telephony.IccCardConstants.State;
 
 import java.io.FileDescriptor;
@@ -122,6 +124,7 @@ public class SubscriptionController extends ISub.Stub {
     /** The singleton instance. */
     protected static SubscriptionController sInstance = null;
     protected static Phone[] sPhones;
+    private static CommandsInterface[] sCommandsInterfaces;
     protected Context mContext;
     protected TelephonyManager mTelephonyManager;
     protected CallManager mCM;
@@ -151,6 +154,7 @@ public class SubscriptionController extends ISub.Stub {
         synchronized (SubscriptionController.class) {
             if (sInstance == null) {
                 sInstance = new SubscriptionController(c);
+                sCommandsInterfaces = ci;
             } else {
                 Log.wtf(LOG_TAG, "init() called multiple times!  sInstance = " + sInstance);
             }
@@ -1431,8 +1435,7 @@ public class SubscriptionController extends ISub.Stub {
     public void setDefaultDataSubId(int subId) {
         enforceModifyPhoneState("setDefaultDataSubId");
         String flexMapSupportType =
-                SystemProperties.get("persist.radio.flexmap_type", "nw_mode");
-
+                SystemProperties.get("persist.radio.flexmap_type", "dds");
         if (subId == SubscriptionManager.DEFAULT_SUBSCRIPTION_ID) {
             throw new RuntimeException("setDefaultDataSubId called with DEFAULT_SUB_ID");
         }
@@ -1447,6 +1450,7 @@ public class SubscriptionController extends ISub.Stub {
             // Only re-map modems if the new default data sub is valid
             RadioAccessFamily[] rafs = new RadioAccessFamily[len];
             boolean atLeastOneMatch = false;
+            int slotId = PhoneConstants.DEFAULT_CARD_INDEX;
             for (int phoneId = 0; phoneId < len; phoneId++) {
                 Phone phone = sPhones[phoneId];
                 int raf;
@@ -1455,6 +1459,7 @@ public class SubscriptionController extends ISub.Stub {
                     // TODO Handle the general case of N modems and M subscriptions.
                     raf = proxyController.getMaxRafSupported();
                     atLeastOneMatch = true;
+                    slotId = phoneId;
                 } else {
                     // TODO Handle the general case of N modems and M subscriptions.
                     raf = proxyController.getMinRafSupported();
@@ -1464,6 +1469,9 @@ public class SubscriptionController extends ISub.Stub {
             }
             if (atLeastOneMatch) {
                 proxyController.setRadioCapability(rafs);
+                if (needsSim2gsmOnly()) {
+                     updateDataSubNetworkType(slotId, subId);
+                }
             } else {
                 if (DBG) logdl("[setDefaultDataSubId] no valid subId's found - not updating.");
             }
@@ -1475,6 +1483,20 @@ public class SubscriptionController extends ISub.Stub {
         Settings.Global.putInt(mContext.getContentResolver(),
                 Settings.Global.MULTI_SIM_DATA_CALL_SUBSCRIPTION, subId);
         broadcastDefaultDataSubIdChanged(subId);
+    }
+
+    private void updateDataSubNetworkType(int slotId, int subId) {
+        SubscriptionInfoUpdater subscriptionInfoUpdater = PhoneFactory.getSubscriptionInfoUpdater();
+        if (subscriptionInfoUpdater != null) {
+            subscriptionInfoUpdater.setDefaultDataSubNetworkType(slotId, subId);
+        }
+    }
+
+    private boolean needsSim2gsmOnly() {
+        if (sCommandsInterfaces != null && sCommandsInterfaces[0] instanceof RIL) {
+            return ((RIL) sCommandsInterfaces[0]).needsOldRilFeature("sim2gsmonly");
+        }
+        return false;
     }
 
     private void updateAllDataConnectionTrackers() {
@@ -1765,6 +1787,26 @@ public class SubscriptionController extends ISub.Stub {
                 SubscriptionManager.UNIQUE_KEY_SUBSCRIPTION_ID +
                         "=" + Integer.toString(subId), null);
         Binder.restoreCallingIdentity(token);
+    }
+
+    /* {@hide} */
+    public void setUserNwMode(int subId, int nwMode) {
+        logd("setUserNwMode, nwMode: " + nwMode + " subId: " + subId);
+        ContentValues value = new ContentValues(1);
+        value.put(SubscriptionManager.USER_NETWORK_MODE, nwMode);
+        mContext.getContentResolver().update(SubscriptionManager.CONTENT_URI,
+                value, BaseColumns._ID + "=" + Integer.toString(subId), null);
+    }
+
+    /* {@hide} */
+    public int getUserNwMode(int subId) {
+        SubscriptionInfo subInfo = getActiveSubscriptionInfo(subId, mContext.getOpPackageName());
+        if (subInfo != null)  {
+            return subInfo.mUserNwMode;
+        } else {
+            loge("getUserNwMode: invalid subId = " + subId);
+            return SubscriptionManager.DEFAULT_NW_MODE;
+        }
     }
 
     /**
