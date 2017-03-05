@@ -72,12 +72,6 @@ import com.android.internal.telephony.uicc.IccIoResult;
 import com.android.internal.telephony.uicc.IccRefreshResponse;
 import com.android.internal.telephony.uicc.IccUtils;
 import com.android.internal.telephony.uicc.SimPhoneBookAdnRecord;
-<<<<<<< HEAD
-import com.android.internal.telephony.RadioCapability;
-import com.android.internal.telephony.TelephonyDevController;
-import com.android.internal.telephony.HardwareConfig;
-=======
->>>>>>> s/ng7.1
 
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
@@ -3701,10 +3695,7 @@ public class RIL extends BaseCommands implements CommandsInterface {
                     mAdnRecordsInfoRegistrants.notifyRegistrants(
                                             new AsyncResult(null, ret, null));
                 }
-<<<<<<< HEAD
-=======
                 break;
->>>>>>> s/ng7.1
             case RIL_UNSOL_PCO_DATA:
                 if (RILJ_LOGD) unsljLogRet(response, ret);
 
